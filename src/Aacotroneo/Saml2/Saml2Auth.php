@@ -38,10 +38,10 @@ class Saml2Auth
     public static function loadOneLoginAuthFromIpdConfig($idpName)
     {
         if (empty($idpName)) {
-            throw new \InvalidArgumentException("IDP name required.");
+            throw new \InvalidArgumentException('IDP name required.');
         }
-
-        $config = config('saml2.'.$idpName);
+        
+        $config = config('saml2.' . $idpName);
 
         if (empty($config['sp']['entityId'])) {
             $config['sp']['entityId'] = URL::route('saml2_metadata', $idpName);
@@ -53,13 +53,13 @@ class Saml2Auth
             empty($config['sp']['singleLogoutService']['url'])) {
             $config['sp']['singleLogoutService']['url'] = URL::route('saml2_sls', $idpName);
         }
-        if (strpos($config['sp']['privateKey'], 'file://')===0) {
+        if (strpos($config['sp']['privateKey'], 'file://') === 0) {
             $config['sp']['privateKey'] = $this->extractPkeyFromFile($config['sp']['privateKey']);
         }
-        if (strpos($config['sp']['x509cert'], 'file://')===0) {
+        if (strpos($config['sp']['x509cert'], 'file://') === 0) {
             $config['sp']['x509cert'] = $this->extractCertFromFile($config['sp']['x509cert']);
         }
-        if (strpos($config['idp']['x509cert'], 'file://')===0) {
+        if (strpos($config['idp']['x509cert'], 'file://') === 0) {
             $config['idp']['x509cert'] = $this->extractCertFromFile($config['idp']['x509cert']);
         }
 
@@ -107,7 +107,7 @@ class Saml2Auth
      *
      * @return string|null If $stay is True, it return a string with the SLO URL + LogoutRequest + parameters
      */
-    function login($returnTo = null, $parameters = array(), $forceAuthn = false, $isPassive = false, $stay = false, $setNameIdPolicy = true)
+    function login($returnTo = null, $parameters = [], $forceAuthn = false, $isPassive = false, $stay = false, $setNameIdPolicy = true)
     {
         $auth = $this->auth;
 
@@ -151,15 +151,14 @@ class Saml2Auth
         $errors = $auth->getErrors();
 
         if (!empty($errors)) {
-            return array('error' => $errors, 'last_error_reason' => $auth->getLastErrorReason());
+            return ['error' => $errors, 'last_error_reason' => $auth->getLastErrorReason()];
         }
 
         if (!$auth->isAuthenticated()) {
-            return array('error' => 'Could not authenticate', 'last_error_reason' => $auth->getLastErrorReason());
+            return ['error' => 'Could not authenticate', 'last_error_reason' => $auth->getLastErrorReason()];
         }
 
         return null;
-
     }
 
     /**
@@ -172,7 +171,7 @@ class Saml2Auth
 
         // destroy the local session by firing the Logout event
         $keep_local_session = false;
-        $session_callback = function () use ($idp) {
+        $session_callback   = function () use ($idp) {
             event(new Saml2LogoutEvent($idp));
         };
 
@@ -181,12 +180,11 @@ class Saml2Auth
         $errors = $auth->getErrors();
 
         if (!empty($errors)) {
-            return array('error' => $errors, 'last_error_reason' => $auth->getLastErrorReason());
-         }
+            return ['error' => $errors, 'last_error_reason' => $auth->getLastErrorReason()];
+        }
 
         return null;
-
-   }
+    }
 
     /**
      * Show metadata about the local sp. Use this to configure your saml2 IDP
@@ -195,16 +193,14 @@ class Saml2Auth
      */
     function getMetadata()
     {
-        $auth = $this->auth;
+        $auth     = $this->auth;
         $settings = $auth->getSettings();
         $metadata = $settings->getSPMetadata();
-        $errors = $settings->validateMetadata($metadata);
+        $errors   = $settings->validateMetadata($metadata);
 
         if (empty($errors)) {
-
             return $metadata;
         } else {
-
             throw new InvalidArgumentException(
                 'Invalid SP metadata: ' . implode(', ', $errors),
                 OneLogin_Saml2_Error::METADATA_SP_INVALID
@@ -217,12 +213,13 @@ class Saml2Auth
      * @see \OneLogin_Saml2_Auth::getLastErrorReason()
      * @return string
      */
-    function getLastErrorReason() {
+    function getLastErrorReason()
+    {
         return $this->auth->getLastErrorReason();
     }
-
     
-    protected static function extractPkeyFromFile($path) {
+    protected static function extractPkeyFromFile($path)
+    {
         $res = openssl_get_privatekey($path);
         if (empty($res)) {
             throw new \Exception('Could not read private key-file at path \'' . $path . '\'');
@@ -232,7 +229,8 @@ class Saml2Auth
         return $this->extractOpensslString($pkey, 'PRIVATE KEY');
     }
 
-    protected static function extractCertFromFile($path) {
+    protected static function extractCertFromFile($path)
+    {
         $res = openssl_x509_read(file_get_contents($path));
         if (empty($res)) {
             throw new \Exception('Could not read X509 certificate-file at path \'' . $path . '\'');
@@ -242,9 +240,10 @@ class Saml2Auth
         return $this->extractOpensslString($cert, 'CERTIFICATE');
     }
 
-    protected static function extractOpensslString($keyString, $delimiter) {
-        $keyString = str_replace(["\r", "\n"], "", $keyString);
-        $regex = '/-{5}BEGIN(?:\s|\w)+' . $delimiter . '-{5}\s*(.+?)\s*-{5}END(?:\s|\w)+' . $delimiter . '-{5}/m';
+    protected static function extractOpensslString($keyString, $delimiter)
+    {
+        $keyString = str_replace(["\r", "\n"], '', $keyString);
+        $regex     = '/-{5}BEGIN(?:\s|\w)+' . $delimiter . '-{5}\s*(.+?)\s*-{5}END(?:\s|\w)+' . $delimiter . '-{5}/m';
         preg_match($regex, $keyString, $matches);
         return empty($matches[1]) ? '' : $matches[1];
     }
